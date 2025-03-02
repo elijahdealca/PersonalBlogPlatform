@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
+    
+    <div class="container">
+        <h1>Welcome to Your Blog</h1>
+        <p>Your personal space to share your thoughts and ideas.</p>
+        
+        {% if user.is_authenticated %}
+            <p>Hello, {{ user.username }}!</p>
+            <a href="{% url 'logout' %}" class="btn">Logout</a>
+        
+        {% endif %}
+    </div>
+{% endblock %}
