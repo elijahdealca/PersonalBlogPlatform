@@ -3,9 +3,13 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import login, logout, authenticate
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 
 from .models import BlogPost
 from .forms import BlogPostForm
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
 
 # Home view
 def home(request):
@@ -62,10 +66,13 @@ def post_create(request):
             post = form.save(commit=False)
             post.author = request.user
             post.save()
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': True, 'redirect_url': post.get_absolute_url()})
             return redirect('post_detail', pk=post.pk)
     else:
         form = BlogPostForm()
     return render(request, 'blog/post_form.html', {'form': form})
+
 
 @login_required
 def post_edit(request, pk):
@@ -76,6 +83,8 @@ def post_edit(request, pk):
         form = BlogPostForm(request.POST, instance=post)
         if form.is_valid():
             post = form.save()
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': True, 'redirect_url': post.get_absolute_url()})
             return redirect('post_detail', pk=post.pk)
     else:
         form = BlogPostForm(instance=post)
@@ -87,3 +96,24 @@ def post_delete(request, pk):
     if request.user == post.author:
         post.delete()
     return redirect('post_list')
+
+@login_required
+def profile_view(request):
+    return render(request, 'users/profile.html', {'user': request.user})
+
+@csrf_exempt
+@login_required
+def ajax_post_update(request, pk):
+    post = get_object_or_404(BlogPost, pk=pk, author=request.user)
+    
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            post.title = data.get('title', post.title)
+            post.content = data.get('content', post.content)
+            post.save()
+            return JsonResponse({'status': 'success', 'title': post.title, 'content': post.content})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    
+    return JsonResponse({'status': 'invalid request'}, status=400)

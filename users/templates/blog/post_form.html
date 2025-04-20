@@ -1,11 +1,33 @@
-{% extends "base.html" %}
+<!-- post_form.html -->
+{% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
-  <h2>{{ form_title }}</h2>
-  <form method="POST">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Save</button>
-  </form>
-  <a href="{% url 'post_list' %}">Cancel</a>
+<div class="container">
+    <h2>{{ form.instance.pk|yesno:"Edit Post,New Post" }}</h2>
+    <form id="postForm" method="post" action="{% if form.instance.pk %}{% url 'post_edit' form.instance.pk %}{% else %}{% url 'post_create' %}{% endif %}">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Save</button>
+    </form>
+</div>
+
+<script>
+document.getElementById('postForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    fetch(this.action, {
+        method: 'POST',
+        body: new FormData(this),
+        headers: {'X-Requested-With': 'XMLHttpRequest'}
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = data.redirect_url;
+        } else {
+            alert("There was an error saving the post.");
+        }
+    });
+});
+</script>
 {% endblock %}
